@@ -4,12 +4,15 @@ package graph
 // will be copied through when generating and any unknown code will be moved to the end.
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"image"
 	_ "image/gif"
 	"image/jpeg"
+	_ "image/png"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -38,11 +41,6 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 }
 
 func (r *mutationResolver) UploadReceipt(ctx context.Context, input model.ReceiptImage) (*model.Receipt, error) {
-	stream, err := ioutil.ReadAll(input.File.File)
-	if err != nil {
-		fmt.Printf("error from file %v", err)
-	}
-
 	user, err := service.GetUserById(input.UserID)
 	if err != nil {
 		fmt.Printf("Can not find user %v", err)
@@ -57,6 +55,18 @@ func (r *mutationResolver) UploadReceipt(ctx context.Context, input model.Receip
 		DateCreated: time.Now().Format(dateFormat),
 	}
 
+	buf := &bytes.Buffer{}
+	tee := io.TeeReader(input.File.File, buf)
+	// check whether it is a valid image file
+	_, _, err = image.Decode(tee)
+	if err != nil {
+		return nil, errors.New("Unsupported file type, only png, jpg and gif are supported")
+	}
+
+	stream, err := ioutil.ReadAll(buf)
+	if err != nil {
+		fmt.Printf("error from file %v", err)
+	}
 	fileErr := ioutil.WriteFile("images/"+imageFileName, stream, 0644)
 	if fileErr != nil {
 		fmt.Printf("file err %v", fileErr)
