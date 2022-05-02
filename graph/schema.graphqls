@@ -1,0 +1,49 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+scalar Upload
+scalar Download
+
+type Receipt {
+  id: ID!
+  imageName: String!
+  imageUrl: String!
+  user: User!
+  DateCreated: String!
+}
+
+type ReceiptInternal {
+  id: ID!
+  imageName: String!
+  userId: ID!
+  DateCreated: String!
+}
+
+type User {
+  id: ID!
+  fullName: String!
+  email: String!
+  DateCreated: String!
+}
+
+type Query {
+  users: [User]!
+  user(id: ID!): User!
+  receipts: [Receipt!]!
+  receiptImage(id: ID!, resolution: Int): Receipt
+}
+
+input NewUser {
+  fullName: String!
+  email: String!
+}
+
+input ReceiptImage {
+  userId: String!
+  file: Upload
+}
+
+type Mutation {
+  createUser(input: NewUser!): User!
+  uploadReceipt(input: ReceiptImage!): Receipt!
+}
