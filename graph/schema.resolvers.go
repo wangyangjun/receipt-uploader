@@ -44,7 +44,7 @@ func (r *mutationResolver) UploadReceipt(ctx context.Context, description string
 		DateCreated: time.Now().Format(dateFormat),
 	}
 
-	err := service.SaveReceiptImg(imageFileName, file)
+	err := service.SaveReceiptImg(imageFileName, file, user.ID)
 	if err != nil {
 		return nil, err
 	}

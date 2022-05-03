@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"strconv"
 
 	"github.com/99designs/gqlgen/graphql"
@@ -18,7 +19,15 @@ import (
 )
 
 // validate upload imge file and save it
-func SaveReceiptImg(imageFileName string, file graphql.Upload) error {
+func SaveReceiptImg(imageFileName string, file graphql.Upload, userId string) error {
+
+	if _, err := os.Stat(path.Join("images", userId)); os.IsNotExist(err) {
+		err := os.MkdirAll(path.Join("images", userId), 0700)
+		if err != nil {
+			log.Fatal("image directory for user initialized failed!")
+		}
+	}
+
 	buff, err := ioutil.ReadAll(file.File)
 	if err != nil {
 		panic(err)
@@ -38,7 +47,7 @@ func SaveReceiptImg(imageFileName string, file graphql.Upload) error {
 		log.Printf("error from file %v", err)
 		return err
 	}
-	err = ioutil.WriteFile("images/"+imageFileName, stream, 0644)
+	err = ioutil.WriteFile(path.Join("images", userId, imageFileName), stream, 0644)
 	if err != nil {
 		log.Printf("file err %v", err)
 		return err

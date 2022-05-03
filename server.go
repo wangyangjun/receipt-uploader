@@ -45,7 +45,7 @@ func main() {
 
 	router := chi.NewRouter()
 
-	router.Use(auth.Middleware())
+	router.Use(auth.AuthMiddleware())
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}}))
 
@@ -53,7 +53,7 @@ func main() {
 	router.Handle("/query", srv)
 
 	fs := http.FileServer(http.Dir("./images"))
-	router.Handle("/image/", http.StripPrefix("/image/", fs))
+	router.Handle("/image/{userId}/*", auth.ImageAuthMiddleware(http.StripPrefix("/image/", fs)))
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, router))

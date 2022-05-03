@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 
 	"github.com/wangyangjun/receipt-uploader/graph/model"
 )
@@ -62,7 +63,7 @@ func GetAllReceipts(userId string) ([]*model.Receipt, error) {
 			receipt := model.Receipt{
 				ID:          receipt.ID,
 				ImageName:   receipt.ImageName,
-				ImageURL:    "http://localhost:8080/" + "image/" + receipt.ImageName,
+				ImageURL:    "http://localhost:" + os.Getenv("PORT") + "/image/" + userId + "/" + receipt.ImageName,
 				DateCreated: receipt.DateCreated,
 			}
 			receipts = append(receipts, &receipt)
@@ -83,7 +84,7 @@ func GetReceptByID(id string, userId string) (*model.Receipt, error) {
 		receipt := model.Receipt{
 			ID:          receiptInternal.ID,
 			ImageName:   receiptInternal.ImageName,
-			ImageURL:    "http://localhost:8080/" + "image/" + receiptInternal.ImageName,
+			ImageURL:    "http://localhost:" + os.Getenv("PORT") + "/image/" + userId + "/" + receiptInternal.ImageName,
 			DateCreated: receiptInternal.DateCreated,
 		}
 		return &receipt, nil

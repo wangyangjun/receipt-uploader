@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/go-chi/chi"
 	"github.com/wangyangjun/receipt-uploader/graph/model"
 	"github.com/wangyangjun/receipt-uploader/graph/service"
 )
@@ -14,7 +15,7 @@ type contextKey struct {
 	name string
 }
 
-func Middleware() func(http.Handler) http.Handler {
+func AuthMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			header := r.Header.Get("Authorization")
@@ -47,6 +48,20 @@ func Middleware() func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func ImageAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userId := chi.URLParam(r, "userId")
+		user := ForContext(r.Context())
+		if user == nil || user.ID != userId {
+			http.Error(w, "Access denied", http.StatusForbidden)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+
 }
 
 // ForContext finds the user from the context. REQUIRES Middleware to have run.
