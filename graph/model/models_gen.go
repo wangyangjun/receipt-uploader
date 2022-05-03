@@ -15,7 +15,7 @@ type Receipt struct {
 	// image url of the uploaded/sacled receipt image,
 	// to access the image a valia token is needed in the request header
 	ImageURL    string `json:"imageUrl"`
-	DateCreated string `json:"DateCreated"`
+	DateCreated string `json:"dateCreated"`
 }
 
 type ReceiptInternal struct {
@@ -23,7 +23,7 @@ type ReceiptInternal struct {
 	ImageName   string `json:"imageName"`
 	Description string `json:"description"`
 	UserID      string `json:"userId"`
-	DateCreated string `json:"DateCreated"`
+	DateCreated string `json:"dateCreated"`
 }
 
 type User struct {

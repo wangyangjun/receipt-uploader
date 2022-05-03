@@ -16,7 +16,7 @@ type Receipt {
   to access the image a valia token is needed in the request header
   """
   imageUrl: String!
-  DateCreated: String!
+  dateCreated: String!
 }
 
 type ReceiptInternal {
@@ -24,7 +24,7 @@ type ReceiptInternal {
   imageName: String!
   description: String!
   userId: ID!
-  DateCreated: String!
+  dateCreated: String!
 }
 
 type User {
@@ -67,12 +67,12 @@ All available mutations in this GraphQL API
 """
 type Mutation {
   """
-  create a new user
+  register a new user
   """
   signup(username: String!, password: String!): User!
 
   """
-  login to the system
+  login to the system, a jwt will be returned if login successfully 
   """
   login(username: String!, password: String!): AuthPayload!
 

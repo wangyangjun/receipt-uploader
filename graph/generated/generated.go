@@ -187,7 +187,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Users(childComplexity), true
 
-	case "Receipt.DateCreated":
+	case "Receipt.dateCreated":
 		if e.complexity.Receipt.DateCreated == nil {
 			break
 		}
@@ -222,7 +222,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Receipt.ImageURL(childComplexity), true
 
-	case "ReceiptInternal.DateCreated":
+	case "ReceiptInternal.dateCreated":
 		if e.complexity.ReceiptInternal.DateCreated == nil {
 			break
 		}
@@ -370,7 +370,7 @@ type Receipt {
   to access the image a valia token is needed in the request header
   """
   imageUrl: String!
-  DateCreated: String!
+  dateCreated: String!
 }
 
 type ReceiptInternal {
@@ -378,7 +378,7 @@ type ReceiptInternal {
   imageName: String!
   description: String!
   userId: ID!
-  DateCreated: String!
+  dateCreated: String!
 }
 
 type User {
@@ -421,12 +421,12 @@ All available mutations in this GraphQL API
 """
 type Mutation {
   """
-  create a new user
+  register a new user
   """
   signup(username: String!, password: String!): User!
 
   """
-  login to the system
+  login to the system, a jwt will be returned if login successfully 
   """
   login(username: String!, password: String!): AuthPayload!
 
@@ -863,8 +863,8 @@ func (ec *executionContext) fieldContext_Mutation_uploadReceipt(ctx context.Cont
 				return ec.fieldContext_Receipt_description(ctx, field)
 			case "imageUrl":
 				return ec.fieldContext_Receipt_imageUrl(ctx, field)
-			case "DateCreated":
-				return ec.fieldContext_Receipt_DateCreated(ctx, field)
+			case "dateCreated":
+				return ec.fieldContext_Receipt_dateCreated(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Receipt", field.Name)
 		},
@@ -984,8 +984,8 @@ func (ec *executionContext) fieldContext_Query_receipts(ctx context.Context, fie
 				return ec.fieldContext_Receipt_description(ctx, field)
 			case "imageUrl":
 				return ec.fieldContext_Receipt_imageUrl(ctx, field)
-			case "DateCreated":
-				return ec.fieldContext_Receipt_DateCreated(ctx, field)
+			case "dateCreated":
+				return ec.fieldContext_Receipt_dateCreated(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Receipt", field.Name)
 		},
@@ -1037,8 +1037,8 @@ func (ec *executionContext) fieldContext_Query_receipt(ctx context.Context, fiel
 				return ec.fieldContext_Receipt_description(ctx, field)
 			case "imageUrl":
 				return ec.fieldContext_Receipt_imageUrl(ctx, field)
-			case "DateCreated":
-				return ec.fieldContext_Receipt_DateCreated(ctx, field)
+			case "dateCreated":
+				return ec.fieldContext_Receipt_dateCreated(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Receipt", field.Name)
 		},
@@ -1362,8 +1362,8 @@ func (ec *executionContext) fieldContext_Receipt_imageUrl(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Receipt_DateCreated(ctx context.Context, field graphql.CollectedField, obj *model.Receipt) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Receipt_DateCreated(ctx, field)
+func (ec *executionContext) _Receipt_dateCreated(ctx context.Context, field graphql.CollectedField, obj *model.Receipt) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Receipt_dateCreated(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1393,7 +1393,7 @@ func (ec *executionContext) _Receipt_DateCreated(ctx context.Context, field grap
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Receipt_DateCreated(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Receipt_dateCreated(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Receipt",
 		Field:      field,
@@ -1582,8 +1582,8 @@ func (ec *executionContext) fieldContext_ReceiptInternal_userId(ctx context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _ReceiptInternal_DateCreated(ctx context.Context, field graphql.CollectedField, obj *model.ReceiptInternal) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ReceiptInternal_DateCreated(ctx, field)
+func (ec *executionContext) _ReceiptInternal_dateCreated(ctx context.Context, field graphql.CollectedField, obj *model.ReceiptInternal) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReceiptInternal_dateCreated(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1613,7 +1613,7 @@ func (ec *executionContext) _ReceiptInternal_DateCreated(ctx context.Context, fi
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_ReceiptInternal_DateCreated(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_ReceiptInternal_dateCreated(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ReceiptInternal",
 		Field:      field,
@@ -3818,9 +3818,9 @@ func (ec *executionContext) _Receipt(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "DateCreated":
+		case "dateCreated":
 
-			out.Values[i] = ec._Receipt_DateCreated(ctx, field, obj)
+			out.Values[i] = ec._Receipt_dateCreated(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -3874,9 +3874,9 @@ func (ec *executionContext) _ReceiptInternal(ctx context.Context, sel ast.Select
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "DateCreated":
+		case "dateCreated":
 
-			out.Values[i] = ec._ReceiptInternal_DateCreated(ctx, field, obj)
+			out.Values[i] = ec._ReceiptInternal_dateCreated(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
