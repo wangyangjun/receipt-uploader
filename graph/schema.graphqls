@@ -6,24 +6,31 @@ scalar Upload
 type Receipt {
   id: ID!
   imageName: String!
+  description: String!
   imageUrl: String!
-  user: User!
   DateCreated: String!
 }
 
 type ReceiptInternal {
   id: ID!
   imageName: String!
+  description: String!
   userId: ID!
   DateCreated: String!
 }
 
 type User {
   id: ID!
-  fullName: String!
-  email: String!
+  username: String!
+  password: String
   DateCreated: String!
 }
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
 
 """
 All available queries in this GraphQL API
@@ -33,11 +40,6 @@ type Query {
   Fetch all users
   """
   users: [User!]!
-
-  """
-  Fetch user by id
-  """
-  user(id: ID!): User!
 
   """
   Fetch all receipts
@@ -51,15 +53,6 @@ type Query {
   receipt(id: ID!, scaleRatio: Int): Receipt
 }
 
-input NewUser {
-  fullName: String!
-  email: String!
-}
-
-input ReceiptImage {
-  userId: String!
-  file: Upload
-}
 
 """
 All available mutations in this GraphQL API
@@ -68,10 +61,15 @@ type Mutation {
   """
   create a new user
   """
-  createUser(input: NewUser!): User!
+  signup(username: String!, password: String!): User!
+
+  """
+  login to the system
+  """
+  login(username: String!, password: String!): AuthPayload!
 
   """
   create a new receipt with uploaded receipt image 
   """
-  uploadReceipt(input: ReceiptImage!): Receipt!
+  uploadReceipt(description: String!, file: Upload!): Receipt!
 }

@@ -12,13 +12,14 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/nfnt/resize"
 	"github.com/wangyangjun/receipt-uploader/graph/model"
 )
 
 // validate upload imge file and save it
-func SaveReceiptImg(imageFileName string, input model.ReceiptImage) error {
-	buff, err := ioutil.ReadAll(input.File.File)
+func SaveReceiptImg(imageFileName string, file graphql.Upload) error {
+	buff, err := ioutil.ReadAll(file.File)
 	if err != nil {
 		panic(err)
 	}

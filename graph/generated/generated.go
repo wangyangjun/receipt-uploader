@@ -44,28 +44,34 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	AuthPayload struct {
+		Token func(childComplexity int) int
+		User  func(childComplexity int) int
+	}
+
 	Mutation struct {
-		CreateUser    func(childComplexity int, input model.NewUser) int
-		UploadReceipt func(childComplexity int, input model.ReceiptImage) int
+		Login         func(childComplexity int, username string, password string) int
+		Signup        func(childComplexity int, username string, password string) int
+		UploadReceipt func(childComplexity int, description string, file graphql.Upload) int
 	}
 
 	Query struct {
 		Receipt  func(childComplexity int, id string, scaleRatio *int) int
 		Receipts func(childComplexity int) int
-		User     func(childComplexity int, id string) int
 		Users    func(childComplexity int) int
 	}
 
 	Receipt struct {
 		DateCreated func(childComplexity int) int
+		Description func(childComplexity int) int
 		ID          func(childComplexity int) int
 		ImageName   func(childComplexity int) int
 		ImageURL    func(childComplexity int) int
-		User        func(childComplexity int) int
 	}
 
 	ReceiptInternal struct {
 		DateCreated func(childComplexity int) int
+		Description func(childComplexity int) int
 		ID          func(childComplexity int) int
 		ImageName   func(childComplexity int) int
 		UserID      func(childComplexity int) int
@@ -73,19 +79,19 @@ type ComplexityRoot struct {
 
 	User struct {
 		DateCreated func(childComplexity int) int
-		Email       func(childComplexity int) int
-		FullName    func(childComplexity int) int
 		ID          func(childComplexity int) int
+		Password    func(childComplexity int) int
+		Username    func(childComplexity int) int
 	}
 }
 
 type MutationResolver interface {
-	CreateUser(ctx context.Context, input model.NewUser) (*model.User, error)
-	UploadReceipt(ctx context.Context, input model.ReceiptImage) (*model.Receipt, error)
+	Signup(ctx context.Context, username string, password string) (*model.User, error)
+	Login(ctx context.Context, username string, password string) (*model.AuthPayload, error)
+	UploadReceipt(ctx context.Context, description string, file graphql.Upload) (*model.Receipt, error)
 }
 type QueryResolver interface {
 	Users(ctx context.Context) ([]*model.User, error)
-	User(ctx context.Context, id string) (*model.User, error)
 	Receipts(ctx context.Context) ([]*model.Receipt, error)
 	Receipt(ctx context.Context, id string, scaleRatio *int) (*model.Receipt, error)
 }
@@ -105,17 +111,43 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
-	case "Mutation.createUser":
-		if e.complexity.Mutation.CreateUser == nil {
+	case "AuthPayload.token":
+		if e.complexity.AuthPayload.Token == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_createUser_args(context.TODO(), rawArgs)
+		return e.complexity.AuthPayload.Token(childComplexity), true
+
+	case "AuthPayload.user":
+		if e.complexity.AuthPayload.User == nil {
+			break
+		}
+
+		return e.complexity.AuthPayload.User(childComplexity), true
+
+	case "Mutation.login":
+		if e.complexity.Mutation.Login == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_login_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateUser(childComplexity, args["input"].(model.NewUser)), true
+		return e.complexity.Mutation.Login(childComplexity, args["username"].(string), args["password"].(string)), true
+
+	case "Mutation.signup":
+		if e.complexity.Mutation.Signup == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_signup_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.Signup(childComplexity, args["username"].(string), args["password"].(string)), true
 
 	case "Mutation.uploadReceipt":
 		if e.complexity.Mutation.UploadReceipt == nil {
@@ -127,7 +159,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UploadReceipt(childComplexity, args["input"].(model.ReceiptImage)), true
+		return e.complexity.Mutation.UploadReceipt(childComplexity, args["description"].(string), args["file"].(graphql.Upload)), true
 
 	case "Query.receipt":
 		if e.complexity.Query.Receipt == nil {
@@ -148,18 +180,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Receipts(childComplexity), true
 
-	case "Query.user":
-		if e.complexity.Query.User == nil {
-			break
-		}
-
-		args, err := ec.field_Query_user_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.User(childComplexity, args["id"].(string)), true
-
 	case "Query.users":
 		if e.complexity.Query.Users == nil {
 			break
@@ -173,6 +193,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Receipt.DateCreated(childComplexity), true
+
+	case "Receipt.description":
+		if e.complexity.Receipt.Description == nil {
+			break
+		}
+
+		return e.complexity.Receipt.Description(childComplexity), true
 
 	case "Receipt.id":
 		if e.complexity.Receipt.ID == nil {
@@ -195,19 +222,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Receipt.ImageURL(childComplexity), true
 
-	case "Receipt.user":
-		if e.complexity.Receipt.User == nil {
-			break
-		}
-
-		return e.complexity.Receipt.User(childComplexity), true
-
 	case "ReceiptInternal.DateCreated":
 		if e.complexity.ReceiptInternal.DateCreated == nil {
 			break
 		}
 
 		return e.complexity.ReceiptInternal.DateCreated(childComplexity), true
+
+	case "ReceiptInternal.description":
+		if e.complexity.ReceiptInternal.Description == nil {
+			break
+		}
+
+		return e.complexity.ReceiptInternal.Description(childComplexity), true
 
 	case "ReceiptInternal.id":
 		if e.complexity.ReceiptInternal.ID == nil {
@@ -237,26 +264,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.DateCreated(childComplexity), true
 
-	case "User.email":
-		if e.complexity.User.Email == nil {
-			break
-		}
-
-		return e.complexity.User.Email(childComplexity), true
-
-	case "User.fullName":
-		if e.complexity.User.FullName == nil {
-			break
-		}
-
-		return e.complexity.User.FullName(childComplexity), true
-
 	case "User.id":
 		if e.complexity.User.ID == nil {
 			break
 		}
 
 		return e.complexity.User.ID(childComplexity), true
+
+	case "User.password":
+		if e.complexity.User.Password == nil {
+			break
+		}
+
+		return e.complexity.User.Password(childComplexity), true
+
+	case "User.username":
+		if e.complexity.User.Username == nil {
+			break
+		}
+
+		return e.complexity.User.Username(childComplexity), true
 
 	}
 	return 0, false
@@ -265,10 +292,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e}
-	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
-		ec.unmarshalInputNewUser,
-		ec.unmarshalInputReceiptImage,
-	)
+	inputUnmarshalMap := graphql.BuildUnmarshalerMap()
 	first := true
 
 	switch rc.Operation.Operation {
@@ -336,24 +360,31 @@ scalar Upload
 type Receipt {
   id: ID!
   imageName: String!
+  description: String!
   imageUrl: String!
-  user: User!
   DateCreated: String!
 }
 
 type ReceiptInternal {
   id: ID!
   imageName: String!
+  description: String!
   userId: ID!
   DateCreated: String!
 }
 
 type User {
   id: ID!
-  fullName: String!
-  email: String!
+  username: String!
+  password: String
   DateCreated: String!
 }
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
 
 """
 All available queries in this GraphQL API
@@ -363,11 +394,6 @@ type Query {
   Fetch all users
   """
   users: [User!]!
-
-  """
-  Fetch user by id
-  """
-  user(id: ID!): User!
 
   """
   Fetch all receipts
@@ -381,15 +407,6 @@ type Query {
   receipt(id: ID!, scaleRatio: Int): Receipt
 }
 
-input NewUser {
-  fullName: String!
-  email: String!
-}
-
-input ReceiptImage {
-  userId: String!
-  file: Upload
-}
 
 """
 All available mutations in this GraphQL API
@@ -398,12 +415,17 @@ type Mutation {
   """
   create a new user
   """
-  createUser(input: NewUser!): User!
+  signup(username: String!, password: String!): User!
+
+  """
+  login to the system
+  """
+  login(username: String!, password: String!): AuthPayload!
 
   """
   create a new receipt with uploaded receipt image 
   """
-  uploadReceipt(input: ReceiptImage!): Receipt!
+  uploadReceipt(description: String!, file: Upload!): Receipt!
 }
 `, BuiltIn: false},
 }
@@ -413,33 +435,75 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
-func (ec *executionContext) field_Mutation_createUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.NewUser
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNNewUser2githubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐNewUser(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["username"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["username"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["password"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["password"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_signup_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["username"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["username"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["password"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["password"] = arg1
 	return args, nil
 }
 
 func (ec *executionContext) field_Mutation_uploadReceipt_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.ReceiptImage
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNReceiptImage2githubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐReceiptImage(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["description"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["description"] = arg0
+	var arg1 graphql.Upload
+	if tmp, ok := rawArgs["file"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("file"))
+		arg1, err = ec.unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["file"] = arg1
 	return args, nil
 }
 
@@ -482,21 +546,6 @@ func (ec *executionContext) field_Query_receipt_args(ctx context.Context, rawArg
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNID2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
-	return args, nil
-}
-
 func (ec *executionContext) field___Type_enumValues_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -535,8 +584,8 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _Mutation_createUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_createUser(ctx, field)
+func (ec *executionContext) _AuthPayload_token(ctx context.Context, field graphql.CollectedField, obj *model.AuthPayload) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AuthPayload_token(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -549,7 +598,51 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateUser(rctx, fc.Args["input"].(model.NewUser))
+		return obj.Token, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_AuthPayload_token(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AuthPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AuthPayload_user(ctx context.Context, field graphql.CollectedField, obj *model.AuthPayload) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AuthPayload_user(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.User, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -566,7 +659,61 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 	return ec.marshalNUser2ᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_createUser(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_AuthPayload_user(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AuthPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "username":
+				return ec.fieldContext_User_username(ctx, field)
+			case "password":
+				return ec.fieldContext_User_password(ctx, field)
+			case "DateCreated":
+				return ec.fieldContext_User_DateCreated(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_signup(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_signup(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().Signup(rctx, fc.Args["username"].(string), fc.Args["password"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_signup(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -576,10 +723,10 @@ func (ec *executionContext) fieldContext_Mutation_createUser(ctx context.Context
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_User_id(ctx, field)
-			case "fullName":
-				return ec.fieldContext_User_fullName(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
+			case "username":
+				return ec.fieldContext_User_username(ctx, field)
+			case "password":
+				return ec.fieldContext_User_password(ctx, field)
 			case "DateCreated":
 				return ec.fieldContext_User_DateCreated(ctx, field)
 			}
@@ -593,7 +740,68 @@ func (ec *executionContext) fieldContext_Mutation_createUser(ctx context.Context
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_createUser_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_signup_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_login(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().Login(rctx, fc.Args["username"].(string), fc.Args["password"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.AuthPayload)
+	fc.Result = res
+	return ec.marshalNAuthPayload2ᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐAuthPayload(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_login(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "token":
+				return ec.fieldContext_AuthPayload_token(ctx, field)
+			case "user":
+				return ec.fieldContext_AuthPayload_user(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_login_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -614,7 +822,7 @@ func (ec *executionContext) _Mutation_uploadReceipt(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UploadReceipt(rctx, fc.Args["input"].(model.ReceiptImage))
+		return ec.resolvers.Mutation().UploadReceipt(rctx, fc.Args["description"].(string), fc.Args["file"].(graphql.Upload))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -643,10 +851,10 @@ func (ec *executionContext) fieldContext_Mutation_uploadReceipt(ctx context.Cont
 				return ec.fieldContext_Receipt_id(ctx, field)
 			case "imageName":
 				return ec.fieldContext_Receipt_imageName(ctx, field)
+			case "description":
+				return ec.fieldContext_Receipt_description(ctx, field)
 			case "imageUrl":
 				return ec.fieldContext_Receipt_imageUrl(ctx, field)
-			case "user":
-				return ec.fieldContext_Receipt_user(ctx, field)
 			case "DateCreated":
 				return ec.fieldContext_Receipt_DateCreated(ctx, field)
 			}
@@ -708,80 +916,15 @@ func (ec *executionContext) fieldContext_Query_users(ctx context.Context, field 
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_User_id(ctx, field)
-			case "fullName":
-				return ec.fieldContext_User_fullName(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
+			case "username":
+				return ec.fieldContext_User_username(ctx, field)
+			case "password":
+				return ec.fieldContext_User_password(ctx, field)
 			case "DateCreated":
 				return ec.fieldContext_User_DateCreated(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_user(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_user(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().User(rctx, fc.Args["id"].(string))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.User)
-	fc.Result = res
-	return ec.marshalNUser2ᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_user(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "fullName":
-				return ec.fieldContext_User_fullName(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "DateCreated":
-				return ec.fieldContext_User_DateCreated(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_user_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
 	}
 	return fc, nil
 }
@@ -829,10 +972,10 @@ func (ec *executionContext) fieldContext_Query_receipts(ctx context.Context, fie
 				return ec.fieldContext_Receipt_id(ctx, field)
 			case "imageName":
 				return ec.fieldContext_Receipt_imageName(ctx, field)
+			case "description":
+				return ec.fieldContext_Receipt_description(ctx, field)
 			case "imageUrl":
 				return ec.fieldContext_Receipt_imageUrl(ctx, field)
-			case "user":
-				return ec.fieldContext_Receipt_user(ctx, field)
 			case "DateCreated":
 				return ec.fieldContext_Receipt_DateCreated(ctx, field)
 			}
@@ -882,10 +1025,10 @@ func (ec *executionContext) fieldContext_Query_receipt(ctx context.Context, fiel
 				return ec.fieldContext_Receipt_id(ctx, field)
 			case "imageName":
 				return ec.fieldContext_Receipt_imageName(ctx, field)
+			case "description":
+				return ec.fieldContext_Receipt_description(ctx, field)
 			case "imageUrl":
 				return ec.fieldContext_Receipt_imageUrl(ctx, field)
-			case "user":
-				return ec.fieldContext_Receipt_user(ctx, field)
 			case "DateCreated":
 				return ec.fieldContext_Receipt_DateCreated(ctx, field)
 			}
@@ -1123,6 +1266,50 @@ func (ec *executionContext) fieldContext_Receipt_imageName(ctx context.Context, 
 	return fc, nil
 }
 
+func (ec *executionContext) _Receipt_description(ctx context.Context, field graphql.CollectedField, obj *model.Receipt) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Receipt_description(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Description, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Receipt_description(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Receipt",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Receipt_imageUrl(ctx context.Context, field graphql.CollectedField, obj *model.Receipt) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Receipt_imageUrl(ctx, field)
 	if err != nil {
@@ -1162,60 +1349,6 @@ func (ec *executionContext) fieldContext_Receipt_imageUrl(ctx context.Context, f
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Receipt_user(ctx context.Context, field graphql.CollectedField, obj *model.Receipt) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Receipt_user(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.User, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.User)
-	fc.Result = res
-	return ec.marshalNUser2ᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Receipt_user(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Receipt",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "fullName":
-				return ec.fieldContext_User_fullName(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "DateCreated":
-				return ec.fieldContext_User_DateCreated(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
 	}
 	return fc, nil
@@ -1341,6 +1474,50 @@ func (ec *executionContext) _ReceiptInternal_imageName(ctx context.Context, fiel
 }
 
 func (ec *executionContext) fieldContext_ReceiptInternal_imageName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ReceiptInternal",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ReceiptInternal_description(ctx context.Context, field graphql.CollectedField, obj *model.ReceiptInternal) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReceiptInternal_description(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Description, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ReceiptInternal_description(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ReceiptInternal",
 		Field:      field,
@@ -1485,8 +1662,8 @@ func (ec *executionContext) fieldContext_User_id(ctx context.Context, field grap
 	return fc, nil
 }
 
-func (ec *executionContext) _User_fullName(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_User_fullName(ctx, field)
+func (ec *executionContext) _User_username(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_username(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1499,7 +1676,7 @@ func (ec *executionContext) _User_fullName(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.FullName, nil
+		return obj.Username, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1516,7 +1693,7 @@ func (ec *executionContext) _User_fullName(ctx context.Context, field graphql.Co
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_User_fullName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_User_username(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "User",
 		Field:      field,
@@ -1529,8 +1706,8 @@ func (ec *executionContext) fieldContext_User_fullName(ctx context.Context, fiel
 	return fc, nil
 }
 
-func (ec *executionContext) _User_email(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_User_email(ctx, field)
+func (ec *executionContext) _User_password(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_password(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1543,24 +1720,21 @@ func (ec *executionContext) _User_email(ctx context.Context, field graphql.Colle
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Email, nil
+		return obj.Password, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_User_email(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_User_password(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "User",
 		Field:      field,
@@ -3390,68 +3564,6 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj interface{}) (model.NewUser, error) {
-	var it model.NewUser
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "fullName":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fullName"))
-			it.FullName, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "email":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
-			it.Email, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputReceiptImage(ctx context.Context, obj interface{}) (model.ReceiptImage, error) {
-	var it model.ReceiptImage
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "userId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-			it.UserID, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "file":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("file"))
-			it.File, err = ec.unmarshalOUpload2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -3459,6 +3571,41 @@ func (ec *executionContext) unmarshalInputReceiptImage(ctx context.Context, obj 
 // endregion ************************** interface.gotpl ***************************
 
 // region    **************************** object.gotpl ****************************
+
+var authPayloadImplementors = []string{"AuthPayload"}
+
+func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionSet, obj *model.AuthPayload) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, authPayloadImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AuthPayload")
+		case "token":
+
+			out.Values[i] = ec._AuthPayload_token(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "user":
+
+			out.Values[i] = ec._AuthPayload_user(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
 
 var mutationImplementors = []string{"Mutation"}
 
@@ -3479,10 +3626,19 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
-		case "createUser":
+		case "signup":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_createUser(ctx, field)
+				return ec._Mutation_signup(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "login":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_login(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
@@ -3537,29 +3693,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_users(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return rrm(innerCtx)
-			})
-		case "user":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_user(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -3663,16 +3796,16 @@ func (ec *executionContext) _Receipt(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "imageUrl":
+		case "description":
 
-			out.Values[i] = ec._Receipt_imageUrl(ctx, field, obj)
+			out.Values[i] = ec._Receipt_description(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "user":
+		case "imageUrl":
 
-			out.Values[i] = ec._Receipt_user(ctx, field, obj)
+			out.Values[i] = ec._Receipt_imageUrl(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -3719,6 +3852,13 @@ func (ec *executionContext) _ReceiptInternal(ctx context.Context, sel ast.Select
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "description":
+
+			out.Values[i] = ec._ReceiptInternal_description(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "userId":
 
 			out.Values[i] = ec._ReceiptInternal_userId(ctx, field, obj)
@@ -3761,20 +3901,17 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "fullName":
+		case "username":
 
-			out.Values[i] = ec._User_fullName(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "email":
-
-			out.Values[i] = ec._User_email(ctx, field, obj)
+			out.Values[i] = ec._User_username(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "password":
+
+			out.Values[i] = ec._User_password(ctx, field, obj)
+
 		case "DateCreated":
 
 			out.Values[i] = ec._User_DateCreated(ctx, field, obj)
@@ -4111,6 +4248,20 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
+func (ec *executionContext) marshalNAuthPayload2githubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐAuthPayload(ctx context.Context, sel ast.SelectionSet, v model.AuthPayload) graphql.Marshaler {
+	return ec._AuthPayload(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAuthPayload2ᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐAuthPayload(ctx context.Context, sel ast.SelectionSet, v *model.AuthPayload) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._AuthPayload(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4139,11 +4290,6 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) unmarshalNNewUser2githubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐNewUser(ctx context.Context, v interface{}) (model.NewUser, error) {
-	res, err := ec.unmarshalInputNewUser(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNReceipt2githubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐReceipt(ctx context.Context, sel ast.SelectionSet, v model.Receipt) graphql.Marshaler {
@@ -4204,11 +4350,6 @@ func (ec *executionContext) marshalNReceipt2ᚖgithubᚗcomᚋwangyangjunᚋrece
 	return ec._Receipt(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNReceiptImage2githubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐReceiptImage(ctx context.Context, v interface{}) (model.ReceiptImage, error) {
-	res, err := ec.unmarshalInputReceiptImage(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4216,6 +4357,21 @@ func (ec *executionContext) unmarshalNString2string(ctx context.Context, v inter
 
 func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
 	res := graphql.MarshalString(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx context.Context, v interface{}) (graphql.Upload, error) {
+	res, err := graphql.UnmarshalUpload(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx context.Context, sel ast.SelectionSet, v graphql.Upload) graphql.Marshaler {
+	res := graphql.MarshalUpload(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -4597,22 +4753,6 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 		return graphql.Null
 	}
 	res := graphql.MarshalString(*v)
-	return res
-}
-
-func (ec *executionContext) unmarshalOUpload2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx context.Context, v interface{}) (*graphql.Upload, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := graphql.UnmarshalUpload(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOUpload2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx context.Context, sel ast.SelectionSet, v *graphql.Upload) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	res := graphql.MarshalUpload(*v)
 	return res
 }
 

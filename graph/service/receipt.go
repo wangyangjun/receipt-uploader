@@ -3,13 +3,14 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 
 	"github.com/wangyangjun/receipt-uploader/graph/model"
 )
 
-func CreateRecept(receipt model.Receipt) error {
+func CreateRecept(receipt model.Receipt, userId string) error {
 	file, err := ioutil.ReadFile(receiptFilePath)
 	if err != nil {
 		log.Println(err)
@@ -19,7 +20,7 @@ func CreateRecept(receipt model.Receipt) error {
 	receiptInternal := model.ReceiptInternal{
 		ID:          receipt.ID,
 		ImageName:   receipt.ImageName,
-		UserID:      receipt.User.ID,
+		UserID:      userId,
 		DateCreated: receipt.DateCreated,
 	}
 
@@ -50,43 +51,42 @@ func readReceiptMap() (map[string]model.ReceiptInternal, error) {
 	return receiptMap, nil
 }
 
-func GetAllReceipts() ([]*model.Receipt, error) {
+func GetAllReceipts(userId string) ([]*model.Receipt, error) {
 	receiptMap, err := readReceiptMap()
 	if err != nil {
 		return nil, err
 	}
 	receipts := []*model.Receipt{}
 	for _, receipt := range receiptMap {
-		user, _ := GetUserById(receipt.UserID)
-		receipt := model.Receipt{
-			ID:          receipt.ID,
-			ImageName:   receipt.ImageName,
-			ImageURL:    "http://localhost:8080/" + "image/" + receipt.ImageName,
-			User:        user,
-			DateCreated: receipt.DateCreated,
+		if receipt.UserID == userId {
+			receipt := model.Receipt{
+				ID:          receipt.ID,
+				ImageName:   receipt.ImageName,
+				ImageURL:    "http://localhost:8080/" + "image/" + receipt.ImageName,
+				DateCreated: receipt.DateCreated,
+			}
+			receipts = append(receipts, &receipt)
 		}
-		receipts = append(receipts, &receipt)
 	}
 
 	return receipts, nil
 }
 
-func GetReceptByID(id string) (*model.Receipt, error) {
+func GetReceptByID(id string, userId string) (*model.Receipt, error) {
 	receiptMap, err := readReceiptMap()
 	if err != nil {
 		return nil, err
 	}
 
-	if receiptInternal, ok := receiptMap[id]; ok {
-		user, _ := GetUserById(receiptInternal.UserID)
+	receiptInternal, ok := receiptMap[id]
+	if ok && receiptInternal.UserID == userId {
 		receipt := model.Receipt{
 			ID:          receiptInternal.ID,
 			ImageName:   receiptInternal.ImageName,
 			ImageURL:    "http://localhost:8080/" + "image/" + receiptInternal.ImageName,
-			User:        user,
 			DateCreated: receiptInternal.DateCreated,
 		}
 		return &receipt, nil
 	}
-	return nil, errors.New("No receipt with such id")
+	return nil, fmt.Errorf("No receipt with such id")
 }

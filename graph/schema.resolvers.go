@@ -12,44 +12,43 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/satori/go.uuid"
+	"github.com/99designs/gqlgen/graphql"
+	uuid "github.com/satori/go.uuid"
 	"github.com/wangyangjun/receipt-uploader/graph/generated"
 	"github.com/wangyangjun/receipt-uploader/graph/model"
 	"github.com/wangyangjun/receipt-uploader/graph/service"
+	"github.com/wangyangjun/receipt-uploader/graph/service/auth"
 )
 
-func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (*model.User, error) {
-	user := model.User{
-		ID:          fmt.Sprintf("%v", uuid.NewV4()),
-		FullName:    input.FullName,
-		Email:       input.Email,
-		DateCreated: time.Now().Format(dateFormat),
-	}
-
-	service.CreateUser(user)
-	return &user, nil
+func (r *mutationResolver) Signup(ctx context.Context, username string, password string) (*model.User, error) {
+	user, err := service.CreateUser(username, password)
+	return user, err
 }
 
-func (r *mutationResolver) UploadReceipt(ctx context.Context, input model.ReceiptImage) (*model.Receipt, error) {
-	user, err := service.GetUserById(input.UserID)
-	if err != nil {
-		fmt.Printf("Can not find user %v", err)
-		return nil, errors.New("User doesn't exist")
+func (r *mutationResolver) Login(ctx context.Context, username string, password string) (*model.AuthPayload, error) {
+	return service.Login(username, password)
+}
+
+func (r *mutationResolver) UploadReceipt(ctx context.Context, description string, file graphql.Upload) (*model.Receipt, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return nil, fmt.Errorf("Access denied")
 	}
+
 	receiptId := fmt.Sprintf("%v", uuid.NewV4())
-	imageFileName := fmt.Sprintf("%v-%v", receiptId, input.File.Filename)
+	imageFileName := fmt.Sprintf("%v-%v", receiptId, file.Filename)
 	receipt := model.Receipt{
 		ID:          receiptId,
 		ImageName:   imageFileName,
-		User:        user,
+		Description: description,
 		DateCreated: time.Now().Format(dateFormat),
 	}
 
-	err = service.SaveReceiptImg(imageFileName, input)
+	err := service.SaveReceiptImg(imageFileName, file)
 	if err != nil {
 		return nil, err
 	}
-	err = service.CreateRecept(receipt)
+	err = service.CreateRecept(receipt, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -60,17 +59,23 @@ func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
 	return service.GetAllUsers()
 }
 
-func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
-	return service.GetUserById(id)
-}
-
 func (r *queryResolver) Receipts(ctx context.Context) ([]*model.Receipt, error) {
-	return service.GetAllReceipts()
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return nil, fmt.Errorf("Access denied")
+	}
+	return service.GetAllReceipts(user.ID)
 }
 
 func (r *queryResolver) Receipt(ctx context.Context, id string, scaleRatio *int) (*model.Receipt, error) {
-	receipt, err := service.GetReceptByID(id)
-
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return nil, fmt.Errorf("Access denied")
+	}
+	receipt, err := service.GetReceptByID(id, user.ID)
+	if err != nil {
+		return nil, err
+	}
 	if scaleRatio != nil && *scaleRatio != 100 {
 		if *scaleRatio <= 0 || *scaleRatio > 100 {
 			return nil, errors.New("Not a valid scale ratio")

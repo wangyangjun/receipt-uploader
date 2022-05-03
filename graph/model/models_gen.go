@@ -2,38 +2,30 @@
 
 package model
 
-import (
-	"github.com/99designs/gqlgen/graphql"
-)
-
-type NewUser struct {
-	FullName string `json:"fullName"`
-	Email    string `json:"email"`
+type AuthPayload struct {
+	Token string `json:"token"`
+	User  *User  `json:"user"`
 }
 
 type Receipt struct {
 	ID          string `json:"id"`
 	ImageName   string `json:"imageName"`
+	Description string `json:"description"`
 	ImageURL    string `json:"imageUrl"`
-	User        *User  `json:"user"`
 	DateCreated string `json:"DateCreated"`
-}
-
-type ReceiptImage struct {
-	UserID string          `json:"userId"`
-	File   *graphql.Upload `json:"file"`
 }
 
 type ReceiptInternal struct {
 	ID          string `json:"id"`
 	ImageName   string `json:"imageName"`
+	Description string `json:"description"`
 	UserID      string `json:"userId"`
 	DateCreated string `json:"DateCreated"`
 }
 
 type User struct {
-	ID          string `json:"id"`
-	FullName    string `json:"fullName"`
-	Email       string `json:"email"`
-	DateCreated string `json:"DateCreated"`
+	ID          string  `json:"id"`
+	Username    string  `json:"username"`
+	Password    *string `json:"password"`
+	DateCreated string  `json:"DateCreated"`
 }
