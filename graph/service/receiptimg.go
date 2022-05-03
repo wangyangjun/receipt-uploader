@@ -56,13 +56,15 @@ func SaveReceiptImg(imageFileName string, file graphql.Upload, userId string) er
 }
 
 // scale image by percentage and save it
-func ScaleReceiptImage(receipt *model.Receipt, scaleRatio int) error {
+func ScaleReceiptImage(receipt *model.Receipt, scaleRatio int, userId string) error {
 	imageFileNameWithScale := strconv.Itoa(scaleRatio) + "-" + receipt.ImageName
-	_, err := os.Stat("images/" + receipt.ImageName)
+	filePath := path.Join("images", userId, receipt.ImageName)
+
+	_, err := os.Stat(filePath)
 	if errors.Is(err, os.ErrNotExist) {
 		return errors.New("Image cannot be found for the receipt")
 	}
-	file, err := os.Open("images/" + receipt.ImageName)
+	file, err := os.Open(filePath)
 	defer file.Close()
 
 	if err != nil {
@@ -80,7 +82,7 @@ func ScaleReceiptImage(receipt *model.Receipt, scaleRatio int) error {
 		return errors.New("Decode image config failed")
 	}
 	newImage := resize.Resize(uint(float32(imgConfig.Width*scaleRatio)*0.01), 0, img, resize.Lanczos3)
-	scaleImageFile, err := os.Create("images/" + imageFileNameWithScale)
+	scaleImageFile, err := os.Create(path.Join("images", userId, imageFileNameWithScale))
 
 	if err != nil {
 		log.Fatal(err)

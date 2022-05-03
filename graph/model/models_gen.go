@@ -7,10 +7,13 @@ type AuthPayload struct {
 	User  *User  `json:"user"`
 }
 
+// Receipt type returned in query receipts and receipt
 type Receipt struct {
 	ID          string `json:"id"`
 	ImageName   string `json:"imageName"`
 	Description string `json:"description"`
+	// image url of the uploaded/sacled receipt image,
+	// to access the image a valia token is needed in the request header
 	ImageURL    string `json:"imageUrl"`
 	DateCreated string `json:"DateCreated"`
 }

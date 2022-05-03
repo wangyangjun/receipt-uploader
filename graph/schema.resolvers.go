@@ -7,13 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	_ "image/gif"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 	"github.com/wangyangjun/receipt-uploader/graph/generated"
 	"github.com/wangyangjun/receipt-uploader/graph/model"
 	"github.com/wangyangjun/receipt-uploader/graph/service"
@@ -84,12 +83,12 @@ func (r *queryResolver) Receipt(ctx context.Context, id string, scaleRatio *int)
 		_, err := os.Stat("image/" + imageFileNameWithScale)
 
 		if errors.Is(err, os.ErrNotExist) {
-			err = service.ScaleReceiptImage(receipt, *scaleRatio)
+			err = service.ScaleReceiptImage(receipt, *scaleRatio, user.ID)
 			if err != nil {
 				return nil, err
 			}
 		}
-		receipt.ImageURL = "http://localhost:8080/" + "image/" + imageFileNameWithScale
+		receipt.ImageURL = service.ImageUrl(user.ID, imageFileNameWithScale)
 	}
 
 	return receipt, err

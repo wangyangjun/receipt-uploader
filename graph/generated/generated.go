@@ -357,10 +357,18 @@ var sources = []*ast.Source{
 # https://gqlgen.com/getting-started/
 scalar Upload
 
+"""
+Receipt type returned in query receipts and receipt
+"""
 type Receipt {
   id: ID!
   imageName: String!
   description: String!
+
+  """
+  image url of the uploaded/sacled receipt image, 
+  to access the image a valia token is needed in the request header
+  """
   imageUrl: String!
   DateCreated: String!
 }

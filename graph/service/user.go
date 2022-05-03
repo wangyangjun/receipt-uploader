@@ -73,14 +73,13 @@ func generateToken(username string) (string, error) {
 	claims := token.Claims.(jwt.MapClaims)
 	/* Set token claims */
 	claims["username"] = username
-	claims["exp"] = time.Now().Add(15 * time.Minute).Unix()
+	claims["exp"] = time.Now().Add(1 * time.Hour).Unix()
 
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
 		log.Fatal("Error in Generating key")
 		return "", err
 	}
-	log.Println(tokenString)
 	return tokenString, nil
 }
 

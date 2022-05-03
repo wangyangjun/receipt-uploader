@@ -22,6 +22,7 @@ func CreateRecept(receipt model.Receipt, userId string) error {
 		ID:          receipt.ID,
 		ImageName:   receipt.ImageName,
 		UserID:      userId,
+		Description: receipt.Description,
 		DateCreated: receipt.DateCreated,
 	}
 
@@ -52,6 +53,10 @@ func readReceiptMap() (map[string]model.ReceiptInternal, error) {
 	return receiptMap, nil
 }
 
+func ImageUrl(userId string, imageName string) string {
+	return "http://localhost:" + os.Getenv("PORT") + "/image/" + userId + "/" + imageName
+}
+
 func GetAllReceipts(userId string) ([]*model.Receipt, error) {
 	receiptMap, err := readReceiptMap()
 	if err != nil {
@@ -63,7 +68,7 @@ func GetAllReceipts(userId string) ([]*model.Receipt, error) {
 			receipt := model.Receipt{
 				ID:          receipt.ID,
 				ImageName:   receipt.ImageName,
-				ImageURL:    "http://localhost:" + os.Getenv("PORT") + "/image/" + userId + "/" + receipt.ImageName,
+				ImageURL:    ImageUrl(userId, receipt.ImageName),
 				DateCreated: receipt.DateCreated,
 			}
 			receipts = append(receipts, &receipt)
@@ -84,7 +89,7 @@ func GetReceptByID(id string, userId string) (*model.Receipt, error) {
 		receipt := model.Receipt{
 			ID:          receiptInternal.ID,
 			ImageName:   receiptInternal.ImageName,
-			ImageURL:    "http://localhost:" + os.Getenv("PORT") + "/image/" + userId + "/" + receiptInternal.ImageName,
+			ImageURL:    ImageUrl(userId, receiptInternal.ImageName),
 			DateCreated: receiptInternal.DateCreated,
 		}
 		return &receipt, nil
