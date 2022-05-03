@@ -4,29 +4,19 @@ package graph
 // will be copied through when generating and any unknown code will be moved to the end.
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"image"
 	_ "image/gif"
-	"image/jpeg"
-	_ "image/png"
-	"io"
-	"io/ioutil"
-	"log"
 	"os"
 	"strconv"
 	"time"
 
-	"github.com/nfnt/resize"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 	"github.com/wangyangjun/receipt-uploader/graph/generated"
 	"github.com/wangyangjun/receipt-uploader/graph/model"
 	"github.com/wangyangjun/receipt-uploader/graph/service"
 )
-
-const dateFormat = "2006-01-02 00:00:00"
 
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (*model.User, error) {
 	user := model.User{
@@ -55,25 +45,14 @@ func (r *mutationResolver) UploadReceipt(ctx context.Context, input model.Receip
 		DateCreated: time.Now().Format(dateFormat),
 	}
 
-	buf := &bytes.Buffer{}
-	tee := io.TeeReader(input.File.File, buf)
-	// check whether it is a valid image file
-	_, _, err = image.Decode(tee)
+	err = service.SaveReceiptImg(imageFileName, input)
 	if err != nil {
-		return nil, errors.New("Unsupported file type, only png, jpg and gif are supported")
+		return nil, err
 	}
-
-	stream, err := ioutil.ReadAll(buf)
+	err = service.CreateRecept(receipt)
 	if err != nil {
-		fmt.Printf("error from file %v", err)
+		return nil, err
 	}
-	fileErr := ioutil.WriteFile("images/"+imageFileName, stream, 0644)
-	if fileErr != nil {
-		fmt.Printf("file err %v", fileErr)
-	}
-
-	service.CreateRecept(receipt)
-
 	return &receipt, nil
 }
 
@@ -86,52 +65,26 @@ func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error
 }
 
 func (r *queryResolver) Receipts(ctx context.Context) ([]*model.Receipt, error) {
-	return service.GetAllRecepts()
+	return service.GetAllReceipts()
 }
 
-func (r *queryResolver) ReceiptImage(ctx context.Context, id string, resolution *int) (*model.Receipt, error) {
+func (r *queryResolver) Receipt(ctx context.Context, id string, scaleRatio *int) (*model.Receipt, error) {
 	receipt, err := service.GetReceptByID(id)
 
-	if resolution != nil && *resolution != 100 {
-		imageFileNameWithScale := strconv.Itoa(*resolution) + "-" + receipt.ImageName
-		_, err := os.Stat("images/" + imageFileNameWithScale)
+	if scaleRatio != nil && *scaleRatio != 100 {
+		if *scaleRatio <= 0 || *scaleRatio > 100 {
+			return nil, errors.New("Not a valid scale ratio")
+		}
+		imageFileNameWithScale := strconv.Itoa(*scaleRatio) + "-" + receipt.ImageName
+		_, err := os.Stat("image/" + imageFileNameWithScale)
 
 		if errors.Is(err, os.ErrNotExist) {
-			_, err := os.Stat("images/" + receipt.ImageName)
-			if errors.Is(err, os.ErrNotExist) {
-				return nil, errors.New("Image cannot be found for the receipt")
-			}
-			file, err := os.Open("images/" + receipt.ImageName)
-			defer file.Close()
-			log.Println("images/" + receipt.ImageName)
-
-			if err != nil {
-				return nil, errors.New("Image cannot be opened")
-			}
-
-			img, _, err := image.Decode(file)
+			err = service.ScaleReceiptImage(receipt, *scaleRatio)
 			if err != nil {
 				return nil, err
 			}
-
-			file.Seek(0, 0)
-			imgConfig, _, err := image.DecodeConfig(file)
-			if err != nil {
-				return nil, errors.New("Decode image config failed")
-			}
-			newImage := resize.Resize(uint(float32(imgConfig.Width*(*resolution))*0.01), 0, img, resize.Lanczos3)
-			scaleImageFile, err := os.Create("images/" + imageFileNameWithScale)
-
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer scaleImageFile.Close()
-
-			// write new image to file
-			jpeg.Encode(scaleImageFile, newImage, nil)
-
 		}
-
+		receipt.ImageURL = "http://localhost:8080/" + "image/" + imageFileNameWithScale
 	}
 
 	return receipt, err
@@ -145,3 +98,11 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+const dateFormat = "2006-01-02 00:00:00"

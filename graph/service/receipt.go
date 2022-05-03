@@ -23,19 +23,15 @@ func CreateRecept(receipt model.Receipt) error {
 		DateCreated: receipt.DateCreated,
 	}
 
-	data := []model.ReceiptInternal{}
-	json.Unmarshal(file, &data)
-
-	data = append(data, receiptInternal)
-
-	// Preparing the data to be marshalled and written.
-	dataBytes, err := json.Marshal(data)
+	receiptMap := make(map[string]model.ReceiptInternal)
+	json.Unmarshal(file, &receiptMap)
+	receiptMap[receiptInternal.ID] = receiptInternal
+	receiptMapBytes, err := json.Marshal(receiptMap)
 	if err != nil {
 		log.Println(err)
 		return errors.New("Receipt serialization failed")
 	}
-
-	err = ioutil.WriteFile(receiptFilePath, dataBytes, 0644)
+	err = ioutil.WriteFile(receiptFilePath, receiptMapBytes, 0644)
 	if err != nil {
 		log.Println(err)
 		return errors.New("Save receipt failed")
@@ -43,24 +39,31 @@ func CreateRecept(receipt model.Receipt) error {
 	return nil
 }
 
-func GetAllRecepts() ([]*model.Receipt, error) {
+func readReceiptMap() (map[string]model.ReceiptInternal, error) {
 	file, err := ioutil.ReadFile(receiptFilePath)
 	if err != nil {
 		log.Println(err)
 		return nil, errors.New("Can not open receipt file")
 	}
-	data := []model.ReceiptInternal{}
-	json.Unmarshal(file, &data)
+	receiptMap := make(map[string]model.ReceiptInternal)
+	json.Unmarshal(file, &receiptMap)
+	return receiptMap, nil
+}
 
+func GetAllReceipts() ([]*model.Receipt, error) {
+	receiptMap, err := readReceiptMap()
+	if err != nil {
+		return nil, err
+	}
 	receipts := []*model.Receipt{}
-	for i := range data {
-		user, _ := GetUserById(data[i].UserID)
+	for _, receipt := range receiptMap {
+		user, _ := GetUserById(receipt.UserID)
 		receipt := model.Receipt{
-			ID:          data[i].ID,
-			ImageName:   data[i].ImageName,
-			ImageURL:    "http://localhost:8080/" + "images/" + data[i].ImageName,
+			ID:          receipt.ID,
+			ImageName:   receipt.ImageName,
+			ImageURL:    "http://localhost:8080/" + "image/" + receipt.ImageName,
 			User:        user,
-			DateCreated: data[i].DateCreated,
+			DateCreated: receipt.DateCreated,
 		}
 		receipts = append(receipts, &receipt)
 	}
@@ -69,13 +72,21 @@ func GetAllRecepts() ([]*model.Receipt, error) {
 }
 
 func GetReceptByID(id string) (*model.Receipt, error) {
-	receipts, err := GetAllRecepts()
-	if err == nil {
-		for i := range receipts {
-			if id == (*receipts[i]).ID {
-				return receipts[i], nil
-			}
+	receiptMap, err := readReceiptMap()
+	if err != nil {
+		return nil, err
+	}
+
+	if receiptInternal, ok := receiptMap[id]; ok {
+		user, _ := GetUserById(receiptInternal.UserID)
+		receipt := model.Receipt{
+			ID:          receiptInternal.ID,
+			ImageName:   receiptInternal.ImageName,
+			ImageURL:    "http://localhost:8080/" + "image/" + receiptInternal.ImageName,
+			User:        user,
+			DateCreated: receiptInternal.DateCreated,
 		}
+		return &receipt, nil
 	}
 	return nil, errors.New("No receipt with such id")
 }

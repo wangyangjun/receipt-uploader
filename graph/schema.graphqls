@@ -2,7 +2,6 @@
 #
 # https://gqlgen.com/getting-started/
 scalar Upload
-scalar Download
 
 type Receipt {
   id: ID!
@@ -26,11 +25,30 @@ type User {
   DateCreated: String!
 }
 
+"""
+All available queries in this GraphQL API
+"""
 type Query {
-  users: [User]!
+  """
+  Fetch all users
+  """
+  users: [User!]!
+
+  """
+  Fetch user by id
+  """
   user(id: ID!): User!
+
+  """
+  Fetch all receipts
+  """
   receipts: [Receipt!]!
-  receiptImage(id: ID!, resolution: Int): Receipt
+
+  """
+  Fetch receipt by id and scaleRatio(optional), scaleRatio should be a number in range (0, 100], 
+  a link of image scaled scaleRatio% will be returned in the response
+  """
+  receipt(id: ID!, scaleRatio: Int): Receipt
 }
 
 input NewUser {
@@ -43,7 +61,17 @@ input ReceiptImage {
   file: Upload
 }
 
+"""
+All available mutations in this GraphQL API
+"""
 type Mutation {
+  """
+  create a new user
+  """
   createUser(input: NewUser!): User!
+
+  """
+  create a new receipt with uploaded receipt image 
+  """
   uploadReceipt(input: ReceiptImage!): Receipt!
 }

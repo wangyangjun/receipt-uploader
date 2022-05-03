@@ -50,10 +50,10 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		ReceiptImage func(childComplexity int, id string, resolution *int) int
-		Receipts     func(childComplexity int) int
-		User         func(childComplexity int, id string) int
-		Users        func(childComplexity int) int
+		Receipt  func(childComplexity int, id string, scaleRatio *int) int
+		Receipts func(childComplexity int) int
+		User     func(childComplexity int, id string) int
+		Users    func(childComplexity int) int
 	}
 
 	Receipt struct {
@@ -87,7 +87,7 @@ type QueryResolver interface {
 	Users(ctx context.Context) ([]*model.User, error)
 	User(ctx context.Context, id string) (*model.User, error)
 	Receipts(ctx context.Context) ([]*model.Receipt, error)
-	ReceiptImage(ctx context.Context, id string, resolution *int) (*model.Receipt, error)
+	Receipt(ctx context.Context, id string, scaleRatio *int) (*model.Receipt, error)
 }
 
 type executableSchema struct {
@@ -129,17 +129,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UploadReceipt(childComplexity, args["input"].(model.ReceiptImage)), true
 
-	case "Query.receiptImage":
-		if e.complexity.Query.ReceiptImage == nil {
+	case "Query.receipt":
+		if e.complexity.Query.Receipt == nil {
 			break
 		}
 
-		args, err := ec.field_Query_receiptImage_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_receipt_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.ReceiptImage(childComplexity, args["id"].(string), args["resolution"].(*int)), true
+		return e.complexity.Query.Receipt(childComplexity, args["id"].(string), args["scaleRatio"].(*int)), true
 
 	case "Query.receipts":
 		if e.complexity.Query.Receipts == nil {
@@ -332,7 +332,6 @@ var sources = []*ast.Source{
 #
 # https://gqlgen.com/getting-started/
 scalar Upload
-scalar Download
 
 type Receipt {
   id: ID!
@@ -356,11 +355,30 @@ type User {
   DateCreated: String!
 }
 
+"""
+All available queries in this GraphQL API
+"""
 type Query {
-  users: [User]!
+  """
+  Fetch all users
+  """
+  users: [User!]!
+
+  """
+  Fetch user by id
+  """
   user(id: ID!): User!
+
+  """
+  Fetch all receipts
+  """
   receipts: [Receipt!]!
-  receiptImage(id: ID!, resolution: Int): Receipt
+
+  """
+  Fetch receipt by id and scaleRatio(optional), scaleRatio should be a number in range (0, 100], 
+  a link of image scaled scaleRatio% will be returned in the response
+  """
+  receipt(id: ID!, scaleRatio: Int): Receipt
 }
 
 input NewUser {
@@ -373,8 +391,18 @@ input ReceiptImage {
   file: Upload
 }
 
+"""
+All available mutations in this GraphQL API
+"""
 type Mutation {
+  """
+  create a new user
+  """
   createUser(input: NewUser!): User!
+
+  """
+  create a new receipt with uploaded receipt image 
+  """
   uploadReceipt(input: ReceiptImage!): Receipt!
 }
 `, BuiltIn: false},
@@ -430,7 +458,7 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_receiptImage_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_receipt_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
@@ -443,14 +471,14 @@ func (ec *executionContext) field_Query_receiptImage_args(ctx context.Context, r
 	}
 	args["id"] = arg0
 	var arg1 *int
-	if tmp, ok := rawArgs["resolution"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resolution"))
+	if tmp, ok := rawArgs["scaleRatio"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scaleRatio"))
 		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["resolution"] = arg1
+	args["scaleRatio"] = arg1
 	return args, nil
 }
 
@@ -667,7 +695,7 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 	}
 	res := resTmp.([]*model.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐUserᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_users(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -814,8 +842,8 @@ func (ec *executionContext) fieldContext_Query_receipts(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_receiptImage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_receiptImage(ctx, field)
+func (ec *executionContext) _Query_receipt(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_receipt(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -828,7 +856,7 @@ func (ec *executionContext) _Query_receiptImage(ctx context.Context, field graph
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().ReceiptImage(rctx, fc.Args["id"].(string), fc.Args["resolution"].(*int))
+		return ec.resolvers.Query().Receipt(rctx, fc.Args["id"].(string), fc.Args["scaleRatio"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -842,7 +870,7 @@ func (ec *executionContext) _Query_receiptImage(ctx context.Context, field graph
 	return ec.marshalOReceipt2ᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐReceipt(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_receiptImage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_receipt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -871,7 +899,7 @@ func (ec *executionContext) fieldContext_Query_receiptImage(ctx context.Context,
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_receiptImage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Query_receipt_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -3568,7 +3596,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func() graphql.Marshaler {
 				return rrm(innerCtx)
 			})
-		case "receiptImage":
+		case "receipt":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -3577,7 +3605,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_receiptImage(ctx, field)
+				res = ec._Query_receipt(ctx, field)
 				return res
 			}
 
@@ -4200,7 +4228,7 @@ func (ec *executionContext) marshalNUser2githubᚗcomᚋwangyangjunᚋreceiptᚑ
 	return ec._User(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNUser2ᚕᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v []*model.User) graphql.Marshaler {
+func (ec *executionContext) marshalNUser2ᚕᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐUserᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.User) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -4224,7 +4252,7 @@ func (ec *executionContext) marshalNUser2ᚕᚖgithubᚗcomᚋwangyangjunᚋrece
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalOUser2ᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐUser(ctx, sel, v[i])
+			ret[i] = ec.marshalNUser2ᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐUser(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -4234,6 +4262,12 @@ func (ec *executionContext) marshalNUser2ᚕᚖgithubᚗcomᚋwangyangjunᚋrece
 
 	}
 	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
 
 	return ret
 }
@@ -4580,13 +4614,6 @@ func (ec *executionContext) marshalOUpload2ᚖgithubᚗcomᚋ99designsᚋgqlgen�
 	}
 	res := graphql.MarshalUpload(*v)
 	return res
-}
-
-func (ec *executionContext) marshalOUser2ᚖgithubᚗcomᚋwangyangjunᚋreceiptᚑuploaderᚋgraphᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v *model.User) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._User(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

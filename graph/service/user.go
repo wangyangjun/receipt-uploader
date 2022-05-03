@@ -16,19 +16,16 @@ func CreateUser(user model.User) error {
 		return errors.New("Can not open users file")
 	}
 
-	data := []model.User{}
-	json.Unmarshal(file, &data)
-
-	data = append(data, user)
-
-	// Preparing the data to be marshalled and written.
-	dataBytes, err := json.Marshal(data)
+	userMap := make(map[string]model.User)
+	json.Unmarshal(file, &userMap)
+	userMap[user.ID] = user
+	userMapBytes, err := json.Marshal(userMap)
 	if err != nil {
 		log.Println(err)
-		return errors.New("User serialization failed")
+		return errors.New("User data serialization failed")
 	}
+	err = ioutil.WriteFile(userFilePath, userMapBytes, 0644)
 
-	err = ioutil.WriteFile(userFilePath, dataBytes, 0644)
 	if err != nil {
 		log.Println(err)
 		return errors.New("Save user failed")
@@ -36,32 +33,38 @@ func CreateUser(user model.User) error {
 	return nil
 }
 
-func GetAllUsers() ([]*model.User, error) {
-	data := []model.User{}
-	users := []*model.User{}
-
+func readUserMap() (map[string]model.User, error) {
 	file, err := ioutil.ReadFile(userFilePath)
 	if err != nil {
 		log.Println(err)
-		return users, errors.New("Can not open users file")
+		return nil, errors.New("Can not open user file")
 	}
+	userMap := make(map[string]model.User)
+	json.Unmarshal(file, &userMap)
+	return userMap, nil
+}
 
-	json.Unmarshal(file, &data)
-	for i := range data {
-		users = append(users, &data[i])
+func GetAllUsers() ([]*model.User, error) {
+	uerMap, err := readUserMap()
+	if err != nil {
+		return nil, err
+	}
+	users := []*model.User{}
+
+	for _, user := range uerMap {
+		users = append(users, &user)
 	}
 
 	return users, nil
 }
 
 func GetUserById(id string) (*model.User, error) {
-	users, err := GetAllUsers()
-	if err == nil {
-		for i := range users {
-			if id == (*users[i]).ID {
-				return users[i], nil
-			}
-		}
+	uerMap, err := readUserMap()
+	if err != nil {
+		return nil, err
+	}
+	if user, ok := uerMap[id]; ok {
+		return &user, nil
 	}
 	return nil, errors.New("No user with such id")
 }
