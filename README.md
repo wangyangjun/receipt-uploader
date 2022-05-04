@@ -22,3 +22,8 @@ Start web server
 3. uploadReceipt(graphql mutation) -- create receipt with uploaded image file(a valid token needed)
 4. fetchReceipts(graphql query) -- fetch all receipts created by user(a valid token needed)
 5. fetchReceipt(graphql query) -- fetch a specific receipt, receipt image will be scaled if paramter `scaleRatio` is a valid number (0, 100)
+
+
+### Note
+I do not have golong working experience before,there might be some stupid errors in my implementation.
+Test is missing, error handlering need improve as well. Need some time to learn this part of golang.

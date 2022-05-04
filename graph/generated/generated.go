@@ -399,12 +399,12 @@ All available queries in this GraphQL API
 """
 type Query {
   """
-  Fetch all users
+  Fetch all users, it is a debug API. After user role implemented, only admin user could access it
   """
   users: [User!]!
 
   """
-  Fetch all receipts
+  Fetch all receipts belongs to the loged user, a valid JWT is required in the request header
   """
   receipts: [Receipt!]!
 
