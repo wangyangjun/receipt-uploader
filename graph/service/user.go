@@ -144,7 +144,13 @@ func GetAllUsers() ([]*model.User, error) {
 	users := []*model.User{}
 
 	for _, user := range userMap {
-		users = append(users, &user)
+		newUser := model.User{
+			ID:          user.ID,
+			Username:    user.Username,
+			DateCreated: user.DateCreated,
+		}
+		// TODO: why &user doens't work here?
+		users = append(users, &newUser)
 	}
 
 	return users, nil

@@ -69,6 +69,7 @@ func GetAllReceipts(userId string) ([]*model.Receipt, error) {
 				ID:          receipt.ID,
 				ImageName:   receipt.ImageName,
 				ImageURL:    ImageUrl(userId, receipt.ImageName),
+				Description: receipt.Description,
 				DateCreated: receipt.DateCreated,
 			}
 			receipts = append(receipts, &receipt)
@@ -90,6 +91,7 @@ func GetReceptByID(id string, userId string) (*model.Receipt, error) {
 			ID:          receiptInternal.ID,
 			ImageName:   receiptInternal.ImageName,
 			ImageURL:    ImageUrl(userId, receiptInternal.ImageName),
+			Description: receiptInternal.Description,
 			DateCreated: receiptInternal.DateCreated,
 		}
 		return &receipt, nil
