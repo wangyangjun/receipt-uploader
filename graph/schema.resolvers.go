@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"github.com/wangyangjun/receipt-uploader/graph/generated"
 	"github.com/wangyangjun/receipt-uploader/graph/model"
 	"github.com/wangyangjun/receipt-uploader/graph/service"
@@ -40,6 +40,7 @@ func (r *mutationResolver) UploadReceipt(ctx context.Context, description string
 		ID:          receiptId,
 		ImageName:   imageFileName,
 		Description: description,
+		ImageURL:    service.ImageUrl(user.ID, imageFileName),
 		DateCreated: time.Now().Format(dateFormat),
 	}
 
