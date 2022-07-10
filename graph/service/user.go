@@ -149,8 +149,10 @@ func GetAllUsers() ([]*model.User, error) {
 			Username:    user.Username,
 			DateCreated: user.DateCreated,
 		}
-		// TODO: why &user doens't work here?
 		users = append(users, &newUser)
+		// why &user doens't work here?
+		// Because variable user is a temporary variable type of User and its address has never been changed. The value of varable user is updated from one value in the map to another
+		// users = append(users, &user)
 	}
 
 	return users, nil
